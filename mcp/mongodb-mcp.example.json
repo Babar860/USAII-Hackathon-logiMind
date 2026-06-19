@@ -1,0 +1,9 @@
+{
+  "name": "mongodb",
+  "transport": "stdio",
+  "command": "npx",
+  "args": ["-y", "mongodb-mcp-server"],
+  "env": {
+    "MDB_MCP_CONNECTION_STRING": "mongodb+srv://USER:PASSWORD@cluster.mongodb.net/logimind?retryWrites=true&w=majority"
+  }
+}

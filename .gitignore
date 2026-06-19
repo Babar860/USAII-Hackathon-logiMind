@@ -1,0 +1,14 @@
+.next/
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+npm-debug.log*
+tsconfig.tsbuildinfo
+
+# Local Codex/workspace state
+.agents/
+
+# Generated QA assets and logs
+artifacts/
