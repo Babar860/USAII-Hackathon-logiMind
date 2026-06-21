@@ -1,7 +1,9 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import type { Response } from "express";
 import { getMongoIntegrationStatus } from "../src/lib/mongodb";
+import { getAppRole, getAuthorizationSummary, hasPermission, roleLabels, type Permission } from "../src/lib/roles";
 import { runScenarios } from "../src/lib/scenarios";
 import {
   analyzeAgentQuery,
@@ -21,6 +23,12 @@ const port = Number(process.env.PORT ?? 8080);
 
 app.use(cors());
 app.use(express.json());
+
+function authorize(response: Response, permission: Permission) {
+  if (hasPermission(getAppRole(), permission)) return true;
+  response.status(403).json({ error: "The configured role is not authorized for this operation." });
+  return false;
+}
 
 app.get("/health", (_request, response) => {
   response.json({ ok: true, service: "logimind-express-api" });
@@ -48,10 +56,12 @@ app.get("/api/alerts", async (_request, response) => {
 });
 
 app.post("/api/alerts", (request, response) => {
+  if (!authorize(response, "alerts:manage")) return;
   response.status(201).json(createAlert(request.body));
 });
 
 app.patch("/api/alerts/:id/status", (request, response) => {
+  if (!authorize(response, "alerts:manage")) return;
   const alert = updateAlertStatus(request.params.id, request.body.status);
   if (!alert) {
     response.status(404).json({ error: "Alert not found" });
@@ -61,6 +71,7 @@ app.patch("/api/alerts/:id/status", (request, response) => {
 });
 
 app.post("/api/agent/query", async (request, response) => {
+  if (!authorize(response, "agent:query")) return;
   response.json(await analyzeAgentQuery(request.body.query ?? "Which shipments may miss SLA today?"));
 });
 
@@ -86,12 +97,15 @@ app.get("/api/human-decisions", async (_request, response) => {
 });
 
 app.post("/api/human-decisions", (request, response) => {
-  response.status(201).json(createDecision(request.body));
+  if (!authorize(response, "decisions:approve")) return;
+  const role = getAppRole();
+  response.status(201).json(createDecision({ ...request.body, approvedBy: roleLabels[role] }));
 });
 
 app.get("/api/integrations/status", async (_request, response) => {
   response.json({
     mongodb: await getMongoIntegrationStatus(),
+    authorization: getAuthorizationSummary(),
     gemini: {
       configured: Boolean(process.env.GEMINI_API_KEY),
       model: process.env.GEMINI_MODEL ?? "gemini-1.5-flash"

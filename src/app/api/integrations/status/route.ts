@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { getMongoIntegrationStatus } from "@/lib/mongodb";
+import { getAuthorizationSummary } from "@/lib/roles";
 
 export async function GET() {
   return NextResponse.json({
     mongodb: await getMongoIntegrationStatus(),
+    authorization: getAuthorizationSummary(),
     gemini: {
       configured: Boolean(process.env.GEMINI_API_KEY),
       model: process.env.GEMINI_MODEL ?? "gemini-1.5-flash",

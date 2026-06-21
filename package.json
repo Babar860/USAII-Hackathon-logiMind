@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "backend:dev": "tsx backend/server.ts",
     "seed:mongodb": "tsx scripts/seed-mongodb.ts",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "backend:start": "tsx backend/server.ts",
+    "test": "tsx --test src/lib/*.test.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

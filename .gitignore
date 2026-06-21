@@ -1,9 +1,12 @@
 .next/
 node_modules/
+node_modules.incomplete*/
 dist/
 coverage/
 .env
 .env.local
+*.env
+!.env.example
 npm-debug.log*
 tsconfig.tsbuildinfo
 
@@ -12,3 +15,4 @@ tsconfig.tsbuildinfo
 
 # Generated QA assets and logs
 artifacts/
+output/video/*.webm

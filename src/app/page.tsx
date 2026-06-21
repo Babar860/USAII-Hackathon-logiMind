@@ -6,6 +6,7 @@ import type { AgentAnalysis, AgentLog, Alert, Carrier, EnrichedShipment, HumanDe
 import { alerts as seedAlerts, carriers as seedCarriers, humanDecisions, shipments } from "@/lib/data";
 import { calculateRisk } from "@/lib/risk";
 import { recommendedScenario, runScenarios } from "@/lib/scenarios";
+import type { Permission } from "@/lib/roles";
 
 const carrierLookup = new Map(seedCarriers.map((carrier) => [carrier.name, carrier]));
 const enrichedShipments = shipments.map((shipment) => calculateRisk(shipment, carrierLookup.get(shipment.carrier)));
@@ -145,6 +146,10 @@ export default function Home() {
   const [alertRows, setAlertRows] = useState<Alert[]>(seedAlerts);
   const [decisionRows, setDecisionRows] = useState<HumanDecision[]>(humanDecisions);
   const [logs, setLogs] = useState<AgentLog[]>([]);
+  const [authorization, setAuthorization] = useState<{ label: string; permissions: Permission[] }>({
+    label: "Loading role",
+    permissions: []
+  });
 
   const sortedShipments = useMemo(() => shipmentRows.toSorted((a, b) => b.riskScore - a.riskScore), [shipmentRows]);
   const atRisk = sortedShipments.filter((shipment) => shipment.riskLevel === "High" || shipment.riskLevel === "Critical");
@@ -179,7 +184,9 @@ export default function Home() {
         const data = statusResponse.data;
         const mongo = data.mongodb?.connected ? "MongoDB connected" : "Memory mode";
         const gemini = data.gemini?.configured ? "Gemini ready" : "Gemini fallback";
-        setIntegrationSummary(`${mongo} | ${gemini}`);
+        const agentRuntime = data.agentBuilder?.configured ? "Agent Runtime configured" : "Local agent active";
+        setAuthorization(data.authorization ?? { label: "Read-only Viewer", permissions: [] });
+        setIntegrationSummary(`${mongo} | ${gemini} | ${agentRuntime}`);
       } catch {
         if (active) setIntegrationSummary("Integration status unavailable");
       }
@@ -192,6 +199,7 @@ export default function Home() {
 
   async function handleAgentQuery(event?: FormEvent) {
     event?.preventDefault();
+    if (!authorization.permissions.includes("agent:query")) return;
     const { data } = await axios.post<AgentAnalysis>("/api/agent/query", { query });
     setSelectedShipment(data.topShipment);
     setAgentAnswer(data.answer);
@@ -215,11 +223,11 @@ export default function Home() {
   }
 
   async function approveRecommendation(approved: boolean) {
+    if (!authorization.permissions.includes("decisions:approve")) return;
     const { data: record } = await axios.post<HumanDecision>("/api/human-decisions", {
       shipmentId: selectedShipment.trackingNumber,
       actionRecommended: recommendation.action,
-      actionApproved: approved,
-      approvedBy: "Operations Manager"
+      actionApproved: approved
     });
     setDecisionRows((current) => [record, ...current]);
     setAlertRows((current) =>
@@ -252,7 +260,13 @@ export default function Home() {
           </section>
           <div className="side-stack">
             <CarrierPerformance rows={carrierRows} />
-            <AgentPanel query={query} setQuery={setQuery} answer={agentAnswer} onSubmit={handleAgentQuery} />
+            <AgentPanel
+              query={query}
+              setQuery={setQuery}
+              answer={agentAnswer}
+              onSubmit={handleAgentQuery}
+              canQuery={authorization.permissions.includes("agent:query")}
+            />
           </div>
           <section className="panel">
             <div className="panel-head">
@@ -307,6 +321,7 @@ export default function Home() {
               </div>
               <b>{alert.recommendedAction}</b>
               <button
+                disabled={!authorization.permissions.includes("alerts:manage")}
                 onClick={async () => {
                   const { data } = await axios.patch<Alert>(`/api/alerts/${alert.id}/status`, { status: "Resolved" });
                   setAlertRows((rows) => rows.map((row) => (row.id === alert.id ? data : row)));
@@ -321,7 +336,14 @@ export default function Home() {
     ),
     "Agent Chat": (
       <div className="main-grid">
-        <AgentPanel query={query} setQuery={setQuery} answer={agentAnswer} onSubmit={handleAgentQuery} large />
+        <AgentPanel
+          query={query}
+          setQuery={setQuery}
+          answer={agentAnswer}
+          onSubmit={handleAgentQuery}
+          canQuery={authorization.permissions.includes("agent:query")}
+          large
+        />
         <ScenarioPanel shipment={selectedShipment} scenarios={scenarios} />
         <section className="panel">
           <div className="panel-head">
@@ -334,8 +356,8 @@ export default function Home() {
             <strong>{recommendation.action}</strong>
             <span>{selectedShipment.trackingNumber} has {selectedShipment.confidenceScore}% confidence and {selectedShipment.riskLevel.toLowerCase()} risk.</span>
             <div>
-              <button onClick={() => void approveRecommendation(true)}>Approve</button>
-              <button className="secondary" onClick={() => void approveRecommendation(false)}>Reject</button>
+              <button disabled={!authorization.permissions.includes("decisions:approve")} onClick={() => void approveRecommendation(true)}>Approve</button>
+              <button disabled={!authorization.permissions.includes("decisions:approve")} className="secondary" onClick={() => void approveRecommendation(false)}>Reject</button>
             </div>
           </div>
         </section>
@@ -401,7 +423,11 @@ export default function Home() {
             <p>Predict SLA failures, simulate interventions, and keep decisions auditable. {integrationSummary}</p>
           </div>
           <div className="topbar-actions">
-            <button onClick={() => void handleAgentQuery()}>Run risk analysis</button>
+            <div className="role-badge">
+              <span>Active role</span>
+              <strong>{authorization.label}</strong>
+            </div>
+            <button disabled={!authorization.permissions.includes("agent:query")} onClick={() => void handleAgentQuery()}>Run risk analysis</button>
           </div>
         </header>
         {mainContent[view]}
@@ -415,12 +441,14 @@ function AgentPanel({
   setQuery,
   answer,
   onSubmit,
+  canQuery,
   large = false
 }: {
   query: string;
   setQuery: (value: string) => void;
   answer: string;
   onSubmit: (event?: FormEvent) => void;
+  canQuery: boolean;
   large?: boolean;
 }) {
   const prompts = ["Which shipments may miss SLA today?", "What happens if we do nothing?", "Compare escalation vs backup carrier."];
@@ -435,7 +463,7 @@ function AgentPanel({
       </div>
       <form onSubmit={onSubmit}>
         <textarea value={query} onChange={(event) => setQuery(event.target.value)} rows={large ? 5 : 3} />
-        <button type="submit">Ask agent</button>
+        <button disabled={!canQuery} type="submit">Ask agent</button>
       </form>
       <div className="prompt-row">
         {prompts.map((prompt) => (

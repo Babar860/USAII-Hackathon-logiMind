@@ -9,6 +9,27 @@ interface ReasoningInput {
   recommendation: ScenarioResult;
 }
 
+export const LOGIMIND_AGENT_ROLE = [
+  "You are LogiMind AI, a logistics decision-support agent.",
+  "Analyze shipment, carrier, route, delay, and SLA information supplied by the user or trusted connected tools.",
+  "Identify high-risk shipments, explain contributing factors, compare operational scenarios, and recommend the best action.",
+  "State confidence, uncertainty, and missing information. Never invent shipment data.",
+  "Never execute an operational action, modify records, or approve a decision.",
+  "Require an authorized human approver for rerouting, carrier changes, expedited shipping, and other controlled interventions."
+].join("\n");
+
+export function buildOperationalPrompt(input: ReasoningInput) {
+  return [
+    LOGIMIND_AGENT_ROLE,
+    `User query: ${input.userQuery}`,
+    `Top shipment: ${JSON.stringify(input.topShipment)}`,
+    `At-risk shipments: ${JSON.stringify(input.atRisk.map((shipment) => shipment.trackingNumber))}`,
+    `Scenario comparisons: ${JSON.stringify(input.scenarios)}`,
+    `Recommended action: ${JSON.stringify(input.recommendation)}`,
+    "Return a concise operations-ready explanation in 4 sentences or fewer."
+  ].join("\n");
+}
+
 export async function generateOperationalReasoning(input: ReasoningInput) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -22,16 +43,7 @@ export async function generateOperationalReasoning(input: ReasoningInput) {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL ?? "gemini-1.5-flash" });
-    const prompt = [
-      "You are LogiMind AI, a logistics decision-support assistant.",
-      "Do not approve actions or write to databases. Explain risk, tradeoffs, uncertainty, and human approval needs.",
-      `User query: ${input.userQuery}`,
-      `Top shipment: ${JSON.stringify(input.topShipment)}`,
-      `At-risk shipments: ${JSON.stringify(input.atRisk.map((shipment) => shipment.trackingNumber))}`,
-      `Scenario comparisons: ${JSON.stringify(input.scenarios)}`,
-      `Recommended action: ${JSON.stringify(input.recommendation)}`,
-      "Return a concise operations-ready explanation in 4 sentences or fewer."
-    ].join("\n");
+    const prompt = buildOperationalPrompt(input);
     const result = await model.generateContent(prompt);
     return {
       provider: "Gemini" as const,
