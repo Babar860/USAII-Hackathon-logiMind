@@ -30,12 +30,45 @@ This project is directly related to research on Agentic AI, RAG, trustworthy AI,
 
 LogiMind uses a Next.js dashboard, a standalone Express API, shared risk and scenario logic, MongoDB-backed operational data adapters, and a Gemini reasoning boundary. The system separates prediction, retrieval, recommendation, approval, and integration status checks so each decision can be traced and reviewed.
 
+## Architecture Diagram
+
+```mermaid
+flowchart LR
+    U[Operations User] --> UI[Next.js Dashboard]
+    UI --> API[Express API]
+    API --> Risk[Deterministic Risk Scoring]
+    API --> Scenario[Scenario Simulation]
+    API --> Agent[LogiMind Agent Workflow]
+    Agent --> RAG[Policy and Operational Context Retrieval]
+    Agent --> Gemini[Gemini Reasoning Boundary]
+    Gemini --> Fallback[Deterministic Fallback]
+    API --> DB[(MongoDB Atlas / Seed Data)]
+    Risk --> Rec[Mitigation Recommendation]
+    Scenario --> Rec
+    RAG --> Rec
+    Fallback --> Rec
+    Rec --> Approval[Human Approval Workflow]
+    Approval --> Audit[Auditable Decision Record]
+```
+
 ## Experimental Setup
 
 - Seed shipment, carrier, alert, and recommendation data are used for reproducible local evaluation.
 - Deterministic SLA risk scoring is compared with agent-generated reasoning outputs.
 - Gemini-backed reasoning is tested with deterministic fallback to verify graceful degradation.
 - Focused tests validate policy logic, scenario simulation, permissions, and recommendation workflow behavior.
+
+## Evaluation Results
+
+| Evaluation area | Result |
+| --- | --- |
+| Shipment risk workflow | Risk scoring, confidence estimation, and scenario simulation are implemented for demo shipments. |
+| Agent reasoning | Agent endpoint returns auditable reasoning tied to retrieved operational context. |
+| LLM fallback | Deterministic fallback keeps recommendations available when `GEMINI_API_KEY` is absent. |
+| Human oversight | Recommendations move through role-aware approval behavior before final decision use. |
+| Reproducibility | Local seed data and shared policy logic allow repeatable demo and test runs without cloud dependencies. |
+
+These results are prototype evaluation outcomes from the implemented demo workflow and focused local tests, not production benchmark claims.
 
 ## Future Research
 
