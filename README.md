@@ -18,6 +18,14 @@ How can an agentic AI system combine shipment risk prediction, operational polic
 - Support role-based access and a human approval workflow.
 - Provide deterministic fallback behavior when live LLM services are unavailable.
 
+## Project Contribution
+
+LogiMind contributes a working prototype for agentic decision support in logistics. Instead of only displaying risk scores, the system connects prediction, scenario simulation, retrieval-grounded reasoning, recommendation generation, and human approval into one auditable workflow.
+
+## Research Relevance
+
+This project is directly related to research on Agentic AI, RAG, trustworthy AI, and intelligent decision support systems. It can support experiments on policy-grounded recommendation quality, human trust in AI-generated mitigation plans, fallback behavior when LLMs are unavailable, and explainability requirements for operational AI agents.
+
 ## System Architecture
 
 LogiMind uses a Next.js dashboard, a standalone Express API, shared risk and scenario logic, MongoDB-backed operational data adapters, and a Gemini reasoning boundary. The system separates prediction, retrieval, recommendation, approval, and integration status checks so each decision can be traced and reviewed.
