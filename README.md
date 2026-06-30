@@ -2,6 +2,52 @@
 
 Predictive logistics decision-support dashboard based on `implementation doc.md`.
 
+## Research Motivation
+
+Logistics teams make high-impact operational decisions under uncertainty, but many AI dashboards stop at prediction without giving decision makers auditable reasoning. LogiMind AI explores how LLM agents, retrieval-augmented reasoning, and human approval workflows can support transparent shipment risk mitigation.
+
+## Research Problem
+
+How can an agentic AI system combine shipment risk prediction, operational policy retrieval, and explainable recommendation generation while keeping a human decision maker in control?
+
+## Objectives
+
+- Predict shipment risk and expose the factors behind each risk score.
+- Retrieve relevant operational policy or context for every recommendation.
+- Generate mitigation options that are auditable and reviewable.
+- Support role-based access and a human approval workflow.
+- Provide deterministic fallback behavior when live LLM services are unavailable.
+
+## System Architecture
+
+LogiMind uses a Next.js dashboard, a standalone Express API, shared risk and scenario logic, MongoDB-backed operational data adapters, and a Gemini reasoning boundary. The system separates prediction, retrieval, recommendation, approval, and integration status checks so each decision can be traced and reviewed.
+
+## Experimental Setup
+
+- Seed shipment, carrier, alert, and recommendation data are used for reproducible local evaluation.
+- Deterministic SLA risk scoring is compared with agent-generated reasoning outputs.
+- Gemini-backed reasoning is tested with deterministic fallback to verify graceful degradation.
+- Focused tests validate policy logic, scenario simulation, permissions, and recommendation workflow behavior.
+
+## Future Research
+
+- Evaluate recommendation quality against historical logistics incidents.
+- Add retrieval quality metrics for policy-grounded recommendations.
+- Compare single-agent and multi-agent decision workflows.
+- Study human trust and approval behavior in logistics decision support.
+- Extend explainability with structured evidence maps and uncertainty reporting.
+
+## Citation
+
+```bibtex
+@software{saeed2026logimind,
+  author = {Saeed, Babar},
+  title = {LogiMind AI: Agentic Logistics Decision Support System},
+  year = {2026},
+  url = {https://github.com/Babar860/USAII-Hackathon-logiMind}
+}
+```
+
 ## Submission materials
 
 - [Copy-ready submission packet](docs/submission-packet.md)
